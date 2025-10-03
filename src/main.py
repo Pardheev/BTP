@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
+from simulation.config import DECISION_RECIPES
 
 # ==============================================================================
 # --- PART A: SCORE CALCULATION FUNCTIONS ---
@@ -108,35 +109,27 @@ def solve_mdp(alpha, beta, resource_cost=50, max_aoi=100, gamma=0.95, epsilon=1e
 if __name__ == "__main__":
     print("--- Starting Phase 1: Offline Policy Generation ---")
 
-    # --- SETUP: Define Parameters and Mock Data ---
-    ALL_PARAMETERS = [
-        'imminent_collision_risk', 'pedestrian_detection', 'real-time_traffic_density',
-        'safe_intervehicular_dist', 'road_surface_condition', 'sudden_weather_event',
-        'general_weather_forecast', 'driver_drowsiness_level', 'road_closure_alert',
-        'pothole_location', 'road_geometry_sharp_curve', 'speed_limit_info'
-    ]
+    # --- MODIFICATION 1: DYNAMICALLY CREATE THE PARAMETER LIST ---
+    # Create a set of all unique parameters required by the decision recipes
+    all_params_set = set()
+    for recipe in DECISION_RECIPES.values():
+        for param in recipe['parameters']:
+            all_params_set.add(param)
     
-    # --- MOCK DATA GENERATION (Replace with your real data loading) ---
-    print("\nStep 1: Generating mock data...")
-    # Generate mock time-series data with different volatilities
-    TIME_SERIES_DATA = {
-        'imminent_collision_risk': np.random.normal(100, 20, 1000), # High vol
-        'real-time_traffic_density': np.random.normal(50, 5, 1000), # Medium vol
-        'pothole_location': np.sin(np.arange(1000) * 0.01) + 10 # Low vol
-    }
-    # Add mock data for all other parameters
-    for p in ALL_PARAMETERS:
-        if p not in TIME_SERIES_DATA:
-            TIME_SERIES_DATA[p] = np.random.normal(10, 1, 1000)
+    ALL_PARAMETERS = sorted(list(all_params_set))
+    
+    print(f"\nSuccessfully identified {len(ALL_PARAMETERS)} unique parameters from the decision recipes.")
 
-    # Generate mock accident data
+    # --- MOCK DATA GENERATION (Now uses the complete parameter list) ---
+    print("\nStep 1: Generating mock data for all parameters...")
+    TIME_SERIES_DATA = {p: np.random.normal(50, 10, 1000) for p in ALL_PARAMETERS}
+    
     data = {p: np.random.rand(500) for p in ALL_PARAMETERS}
     data['Accident_Severity'] = np.random.randint(0, 3, 500)
-    # Make some features more important
-    data['Accident_Severity'] = data['Accident_Severity'] + (2 * data['imminent_collision_risk']).astype(int)
-    data['Accident_Severity'] = np.clip(data['Accident_Severity'], 0, 2)
     ACCIDENT_DATA = pd.DataFrame(data)
     print("Mock data generated.")
+    
+    # --- The rest of the script remains the same but now operates on the full list ---
     
     # --- PART A: CALCULATE SCORES ---
     print("\nStep 2: Calculating Volatility and Criticality scores...")
@@ -151,13 +144,14 @@ if __name__ == "__main__":
     param_classifications = {p: (volatility_categories[p], criticality_categories[p]) for p in ALL_PARAMETERS}
     
     print("Parameter Classifications Complete:")
-    for param, cats in param_classifications.items():
-        print(f"  - {param}: (Volatility: {cats[0]}, Criticality: {cats[1]})")
+    # (Optional: print first 5 for brevity)
+    for i, (param, cats) in enumerate(param_classifications.items()):
+        if i < 5:
+            print(f"  - {param}: (Volatility: {cats[0]}, Criticality: {cats[1]})")
 
     # --- PART C: GENERATE THE 9 MASTER POLICIES ---
     print("\nStep 4: Generating the 9 master policies...")
     
-    # This is your 3x3 matrix of (alpha, beta) pairs
     ALPHA_BETA_GRID = {
         ('High', 'High'):   (3.0, 1.5), ('High', 'Medium'):   (2.8, 0.8), ('High', 'Low'):   (2.5, 0.3),
         ('Medium', 'High'): (2.0, 1.2), ('Medium', 'Medium'): (1.8, 0.5), ('Medium', 'Low'): (1.5, 0.2),
@@ -173,11 +167,3 @@ if __name__ == "__main__":
     
     print("\n--- Phase 1 Complete! ---")
     print(f"{len(master_policies)} master policies have been generated.")
-    
-    # You would now save `param_classifications` and `master_policies` to files
-    # to be used by your online simulation.
-    # For example:
-    # np.save('results/policies/master_policies.npy', master_policies)
-    
-    print("\nExample Policy for High Volatility, High Criticality (first 20 states):")
-    print(master_policies[('High', 'High')][:20])
