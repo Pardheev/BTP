@@ -1,66 +1,92 @@
+# File: sem7/src/main.py
+
 import numpy as np
-import pandas as pd
 import json
+from collections import defaultdict
 
-# Import the new function from your solver
-from mdp.solver import generate_and_save_master_policies 
-from simulation.config import DECISION_RECIPES
-from analysis.scoring import (
-    calculate_volatility_score,
-    get_criticality_scores,
-    categorize_scores,
-)
-
-def generate_mock_data(parameters):
-    """A helper function to create mock data for the simulation."""
-    print("\nStep 1: Generating mock data for all parameters...")
-    # (This function is unchanged)
-    time_series_data = {p: np.random.normal(50, 10, 1000) for p in parameters}
-    accident_df_data = {p: np.random.rand(500) for p in parameters}
-    accident_df_data['Accident_Severity'] = np.random.randint(0, 3, 500)
-    accident_data = pd.DataFrame(accident_df_data)
-    print("Mock data generated.")
-    return time_series_data, accident_data
+# --- Import all necessary functions from your project modules ---
+from mdp.solver import get_or_generate_brain
+from simulation.online_simulator import run_single_online_iteration
 
 def main():
-    """Main orchestration script for the offline policy generation phase."""
-    print("--- Starting Phase 1: Offline Policy Generation ---")
+    """
+    Main orchestration script. Runs the entire pipeline:
+    1. Offline Phase: Generates or loads the MDP policies ("the brain").
+    2. Online Phase: Runs the full simulation experiment using the brain.
+    3. Results: Saves the final aggregated data for plotting.
+    """
+    # ==========================================================================
+    # PHASE 1: OFFLINE BRAIN GENERATION (or loading from file)
+    # ==========================================================================
+    print("--- Running Offline Phase ---")
+    # This single function handles everything for the offline part
+    master_policies, param_classifications = get_or_generate_brain()
+    print("--- Offline Phase Complete ---")
 
-    all_params_set = {param for recipe in DECISION_RECIPES.values() for param in recipe['parameters']}
-    ALL_PARAMETERS = sorted(list(all_params_set))
-    print(f"\nSuccessfully identified {len(ALL_PARAMETERS)} unique parameters.")
-
-    time_series_data, accident_data = generate_mock_data(ALL_PARAMETERS)
+    # ==========================================================================
+    # PHASE 2: ONLINE SIMULATION EXPERIMENT
+    # ==========================================================================
+    print("\n--- Running Online Phase ---")
     
-    # --- Part A & B: Analyze and Categorize Parameters ---
-    print("\nStep 2 & 3: Analyzing and Categorizing Parameters...")
-    volatility_scores = {p: calculate_volatility_score(time_series_data[p]) for p in ALL_PARAMETERS}
-    criticality_scores = get_criticality_scores(ALL_PARAMETERS, accident_data)
-    volatility_categories = categorize_scores(volatility_scores)
-    criticality_categories = categorize_scores(criticality_scores)
-    param_classifications = {p: (volatility_categories[p], criticality_categories[p]) for p in ALL_PARAMETERS}
-    print("Parameter Classifications Complete.")
-
-    # --- Part C: Define the Alpha-Beta Grid ---
-    ALPHA_BETA_GRID = {
-        ('High', 'High'):   (3.0, 1.5), ('High', 'Medium'):   (2.8, 0.8), ('High', 'Low'):   (2.5, 0.3),
-        ('Medium', 'High'): (2.0, 1.2), ('Medium', 'Medium'): (1.8, 0.5), ('Medium', 'Low'): (1.5, 0.2),
-        ('Low', 'High'):    (1.5, 1.0), ('Low', 'Medium'):    (1.2, 0.4), ('Low', 'Low'):    (1.1, 0.1),
+    # --- Define the Experiment Parameters ---
+    user_counts_to_simulate = [50, 100, 150, 200, 250]
+    iterations_per_count = 100  # As specified for statistical significance
+    
+    # This dictionary will store all final results, ready for plotting
+    experiment_results = {
+        "vs_users": {},
+        "vs_time": {}
     }
 
-    # ==============================================================================
-    # <--- REFACTORED SECTION: CALL SOLVER TO GENERATE AND SAVE POLICIES --- >
-    # ==============================================================================
-    
-    # Call the function from solver.py to generate and save the master policies
-    generate_and_save_master_policies(ALPHA_BETA_GRID, save_path="master_policies.json")
+    # --- Run the Full Experiment ---
+    for num_users in user_counts_to_simulate:
+        print(f"\n--- Starting Experiment for {num_users} Users ({iterations_per_count} iterations) ---")
+        
+        # Lists to store the totals from each of the 100 iterations
+        run_totals = {"sensor_accesses": [], "energy_consumed": []}
+        # Dicts to aggregate time-series data across the 100 iterations
+        time_series_agg = {"accesses": defaultdict(list), "energy": defaultdict(list)}
+        
+        for i in range(iterations_per_count):
+            print(f"  Running iteration {i+1}/{iterations_per_count}...")
+            # Run one full simulation from the online_simulator module
+            result = run_single_online_iteration(num_users, master_policies, param_classifications)
+            
+            # Store the totals for this run
+            run_totals["sensor_accesses"].append(result["total_sensor_accesses"])
+            run_totals["energy_consumed"].append(result["total_energy_consumed"])
+            
+            # Append the time-series data for this run
+            for t, val in result["accesses_over_time"].items():
+                time_series_agg["accesses"][t].append(val)
+            for t, val in result["energy_over_time"].items():
+                time_series_agg["energy"][t].append(val)
 
-    # --- Save the parameter classifications (this logic stays in main.py) ---
-    print("\nStep 5: Saving parameter classifications...")
-    with open('param_classifications.json', 'w') as f:
-        json.dump(param_classifications, f, indent=2)
-    print("  - Saved 'param_classifications.json' 💾")
-    print("\nOffline phase is complete. The brain is ready for the online simulator.")
+        # --- Aggregate and store the results for this user count ---
+        # Data for "vs Users" plot
+        experiment_results["vs_users"][num_users] = {
+            "avg_sensor_accesses": np.mean(run_totals["sensor_accesses"]),
+            "std_sensor_accesses": np.std(run_totals["sensor_accesses"]),
+            "avg_energy_consumed": np.mean(run_totals["energy_consumed"]),
+            "std_energy_consumed": np.std(run_totals["energy_consumed"])
+        }
+        
+        # Data for "vs Time" plot
+        sorted_time_steps = sorted(time_series_agg["accesses"].keys())
+        experiment_results["vs_time"][num_users] = {
+            "time_steps": sorted_time_steps,
+            "avg_accesses_over_time": [np.mean(time_series_agg["accesses"][t]) for t in sorted_time_steps],
+            "avg_energy_over_time": [np.mean(time_series_agg["energy"][t]) for t in sorted_time_steps]
+        }
+    
+    print("\n--- All Experiments Complete ---")
+    
+    # Save the final, aggregated results to a file for plotting
+    with open('simulation_results_for_plotting.json', 'w') as f:
+        json.dump(experiment_results, f, indent=2)
+    print("\nFinal results saved to 'simulation_results_for_plotting.json'")
+    print("This file contains all the data you need for your graphs. 📈")
+
 
 if __name__ == "__main__":
     main()
