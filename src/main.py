@@ -29,7 +29,7 @@ def main():
     print("\n--- Running Online Phase ---")
     
     # --- Define the Experiment Parameters ---
-    user_counts_to_simulate = [50, 100, 150, 200, 250]
+    user_counts_to_simulate = [50, 75, 100,125, 150, 175, 200]
     iterations_per_count = 100  # As specified for statistical significance
     
     # This dictionary will store all final results, ready for plotting

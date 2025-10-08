@@ -61,7 +61,7 @@ def generate_user_requests(users, time_step):
     for user in users:
         if time_step >= user['next_request_time']:
             num_dqs = random.randint(1, 5)
-            dq_list = sorted(random.sample(range(1, 26), num_dqs)) # DQs from 1 to 25
+            dq_list = sorted(random.sample(range(1, 16), num_dqs)) # DQs from 1 to 25
             
             requests_this_step.append([
                 user['id'],

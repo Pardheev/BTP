@@ -25,10 +25,19 @@ def run_single_online_iteration(num_users, master_policies, param_classification
     """
     Runs ONE full online simulation iteration and returns the detailed performance metrics for that run.
     """
-    # --- 1. Generate all simulation events ---
+    # --- Define total sensors and calculate static vs. mobile ---
+    TOTAL_SENSORS = 500
+    num_mobile_sensors = num_users
+    num_static_sensors = TOTAL_SENSORS - num_mobile_sensors
+
+    # --- 1. Generate all simulation events using the new calculation ---
     simulation_events = run_simulation(
-        num_users=num_users, num_sensors=450, area=(0, 10000, 0, 10000),
-        duration=100, mean_speed=15, alpha=0.75
+        num_users=num_users, 
+        num_sensors=num_static_sensors, # <-- Use the calculated number
+        area=(0, 10000, 0, 10000),
+        duration=100, 
+        mean_speed=15, 
+        alpha=0.75
     )
     all_requests = simulation_events["requests"]
     static_sensors = simulation_events["static_sensors"]
@@ -37,6 +46,7 @@ def run_single_online_iteration(num_users, master_policies, param_classification
     db = {}
     total_sensor_accesses = 0
     total_energy_consumed = 0
+    total_decisions_made = 0 # <-- ADD THIS COUNTER
     accesses_over_time = defaultdict(int)
     energy_over_time = defaultdict(float)
 
@@ -47,6 +57,7 @@ def run_single_online_iteration(num_users, master_policies, param_classification
         nearest_sensor_id, _ = find_nearest_sensor(user_coords, static_sensors)
         
         for dq in dq_list:
+            total_decisions_made += 1 # <-- INCREMENT FOR EACH DQ PROCESSED
             required_params = get_params_for_dq(dq)
             
             for param in required_params:
@@ -76,9 +87,13 @@ def run_single_online_iteration(num_users, master_policies, param_classification
                     energy_over_time[time_step] += COST_CACHE_LOOKUP_ENERGY
                     db[db_key] = min(db.get(db_key, 0) + 1, MAX_AOI)
 
+    # --- Calculate the new average metric ---
+    avg_energy_per_decision = total_energy_consumed / total_decisions_made if total_decisions_made > 0 else 0
+
     return {
         "total_sensor_accesses": total_sensor_accesses,
         "total_energy_consumed": total_energy_consumed,
+        "avg_energy_per_decision": avg_energy_per_decision, # <-- RETURN THE NEW METRIC
         "accesses_over_time": accesses_over_time,
         "energy_over_time": energy_over_time
     }
