@@ -1,19 +1,18 @@
-#  simulation/config.py
+# File: sem7/src/simulation/config.py
 
+# A reduced set of DQs to align with the DQ-Map paper's 15 parameters
 DECISION_RECIPES = {
-    # --- A smaller, more focused set of DQs for comparability ---
-
-    # Critical Safety (4 unique params)
+    # Critical Safety (~5 unique params)
     "imminent_collision_warning_forward": {
         "parameters": ["forward_vehicle_distance", "relative_speed", "own_vehicle_speed"],
         "sensor_accesses": 3, "procedure_type": "Rule-Based", "procedure_logic": "..."
     },
     "emergency_braking_assist": {
-        "parameters": ["forward_object_distance", "relative_speed", "own_vehicle_speed"],
+        "parameters": ["forward_object_distance", "driver_brake_pedal_status", "own_vehicle_speed"],
         "sensor_accesses": 3, "procedure_type": "Rule-Based", "procedure_logic": "..."
     },
 
-    # Maneuvering (5 unique params)
+    # Maneuvering (~5 unique params)
     "safe_lane_change_advisory": {
         "parameters": ["rear_vehicle_distance", "side_vehicle_distance", "relative_speed_rear"],
         "sensor_accesses": 3, "procedure_type": "Mathematical", "procedure_logic": "..."
@@ -23,12 +22,8 @@ DECISION_RECIPES = {
         "sensor_accesses": 3, "procedure_type": "Mathematical", "procedure_logic": "..."
     },
     
-    # Situational Awareness (6 unique params)
-    "traffic_level_assessment": {
-        "parameters": ["average_speed_segment", "vehicle_count_segment"],
-        "sensor_accesses": 2, "procedure_type": "Rule-Based", "procedure_logic": "..."
-    },
-     "road_condition_report": {
+    # Situational Awareness (~5 unique params)
+    "road_condition_report": {
         "parameters": ["surface_moisture_level", "surface_temperature", "pothole_density"],
         "sensor_accesses": 3, "procedure_type": "Rule-Based", "procedure_logic": "..."
     },
