@@ -29,7 +29,8 @@ def main():
     print("\n--- Running Online Phase ---")
     
     # --- Define the Experiment Parameters ---
-    user_counts_to_simulate = [50, 75, 100,125, 150, 175, 200]
+    user_counts_to_simulate = [50, 100, 150, 200, 250]
+    # user_counts_to_simulate = [50, 75, 100, 125, 150, 175, 200]
     iterations_per_count = 100  # As specified for statistical significance
     
     # This dictionary will store all final results, ready for plotting
@@ -43,7 +44,11 @@ def main():
         print(f"\n--- Starting Experiment for {num_users} Users ({iterations_per_count} iterations) ---")
         
         # Lists to store the totals from each of the 100 iterations
-        run_totals = {"sensor_accesses": [], "energy_consumed": []}
+        run_totals = {
+            "sensor_accesses": [],
+            "energy_consumed": [],
+            "avg_aoi": [] # For QoS
+        }
         # Dicts to aggregate time-series data across the 100 iterations
         time_series_agg = {"accesses": defaultdict(list), "energy": defaultdict(list)}
         
@@ -52,9 +57,10 @@ def main():
             # Run one full simulation from the online_simulator module
             result = run_single_online_iteration(num_users, master_policies, param_classifications)
             
-            # Store the totals for this run
+            # Store the total metrics for this iteration
             run_totals["sensor_accesses"].append(result["total_sensor_accesses"])
             run_totals["energy_consumed"].append(result["total_energy_consumed"])
+            run_totals["avg_aoi"].append(result["avg_aoi_for_qos"])
             
             # Append the time-series data for this run
             for t, val in result["accesses_over_time"].items():
@@ -68,7 +74,9 @@ def main():
             "avg_sensor_accesses": np.mean(run_totals["sensor_accesses"]),
             "std_sensor_accesses": np.std(run_totals["sensor_accesses"]),
             "avg_energy_consumed": np.mean(run_totals["energy_consumed"]),
-            "std_energy_consumed": np.std(run_totals["energy_consumed"])
+            "std_energy_consumed": np.std(run_totals["energy_consumed"]),
+            "avg_aoi_for_qos": np.mean(run_totals["avg_aoi"]),
+            "std_aoi_for_qos": np.std(run_totals["avg_aoi"])
         }
         
         # Data for "vs Time" plot

@@ -23,7 +23,7 @@ def get_params_for_dq(dq_number):
 
 def run_single_online_iteration(num_users, master_policies, param_classifications):
     """
-    Runs ONE full online simulation iteration and returns the detailed performance metrics for that run.
+    Runs ONE full online simulation iteration and returns the detailed performance metrics.
     """
     # --- 1. Generate all simulation events ---
     simulation_events = run_simulation(
@@ -34,9 +34,16 @@ def run_single_online_iteration(num_users, master_policies, param_classification
     static_sensors = simulation_events["static_sensors"]
 
     # --- 2. Initialize State for this Run ---
-    db = {}
+    db = {}  # The database: {(sensor_id, param_name): aoi}
+
+    # Performance metric counters
     total_sensor_accesses = 0
     total_energy_consumed = 0
+    total_decisions_made = 0
+    
+    # NEW: List to store the AoI for every parameter used in a decision
+    aoi_at_decision_time = []
+
     accesses_over_time = defaultdict(int)
     energy_over_time = defaultdict(float)
 
@@ -47,15 +54,24 @@ def run_single_online_iteration(num_users, master_policies, param_classification
         nearest_sensor_id, _ = find_nearest_sensor(user_coords, static_sensors)
         
         for dq in dq_list:
+            total_decisions_made += 1
             required_params = get_params_for_dq(dq)
             
             for param in required_params:
                 db_key = (nearest_sensor_id, param)
                 
+                # Default to a high AoI if the parameter has never been seen
+                current_aoi = db.get(db_key, MAX_AOI)
+                
+                # ==========================================================
+                # <--- NEW: RECORD THE AOI FOR QOS MEASUREMENT --- >
+                # ==========================================================
+                aoi_at_decision_time.append(current_aoi)
+
+                # --- (The rest of the MDP logic is the same) ---
                 if db_key not in db:
                     action = 1
                 else:
-                    current_aoi = db[db_key]
                     category = tuple(param_classifications.get(param))
                     
                     if category and category in master_policies:
@@ -74,10 +90,16 @@ def run_single_online_iteration(num_users, master_policies, param_classification
                 else: # CACHE
                     total_energy_consumed += COST_CACHE_LOOKUP_ENERGY
                     energy_over_time[time_step] += COST_CACHE_LOOKUP_ENERGY
-                    db[db_key] = min(db.get(db_key, 0) + 1, MAX_AOI)
+                    db[db_key] = min(current_aoi + 1, MAX_AOI)
+
+    # --- Calculate the final QoS metric ---
+    avg_aoi = np.mean(aoi_at_decision_time) if aoi_at_decision_time else 0
+    avg_energy_per_decision = total_energy_consumed / total_decisions_made if total_decisions_made > 0 else 0
 
     return {
+        "avg_aoi_for_qos": avg_aoi, # <-- Your new QoS metric
         "total_sensor_accesses": total_sensor_accesses,
+        "avg_energy_per_decision": avg_energy_per_decision,
         "total_energy_consumed": total_energy_consumed,
         "accesses_over_time": accesses_over_time,
         "energy_over_time": energy_over_time
