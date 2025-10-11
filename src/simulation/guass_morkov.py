@@ -56,6 +56,8 @@ def find_nearest_sensor(coords, static_sensors):
 def generate_user_requests(users, time_step):
     """
     Checks which users should make a request at the current time step and returns a list of request data.
+    
+    Modified to include a random unique request/destination ID.
     """
     requests_this_step = []
     for user in users:
@@ -63,10 +65,15 @@ def generate_user_requests(users, time_step):
             num_dqs = random.randint(1, 5)
             dq_list = sorted(random.sample(range(1, 26), num_dqs)) # DQs from 1 to 25
             
+            # Generate a random ID (e.g., representing a destination or request ID)
+            request_id = random.randint(1000, 9999) 
+            
+            # Request format: [user_id, user_x, user_y, request_id, time_step, dq_list]
             requests_this_step.append([
                 user['id'],
                 round(user['x'], 2),
                 round(user['y'], 2),
+                request_id,  # <-- NEW: Random ID
                 time_step,
                 dq_list
             ])

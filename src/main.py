@@ -1,12 +1,12 @@
-# File: sem7/src/main.py
-
 import numpy as np
 import json
 from collections import defaultdict
+import pandas as pd # Import pandas for easier handling of complex averages
 
 # --- Import all necessary functions from your project modules ---
 from mdp.solver import get_or_generate_brain
 from simulation.online_simulator import run_single_online_iteration
+from simulation.guass_morkov import run_simulation # Need this to pre-run for request counts
 
 def main():
     """
@@ -19,7 +19,6 @@ def main():
     # PHASE 1: OFFLINE BRAIN GENERATION (or loading from file)
     # ==========================================================================
     print("--- Running Offline Phase ---")
-    # This single function handles everything for the offline part
     master_policies, param_classifications = get_or_generate_brain()
     print("--- Offline Phase Complete ---")
 
@@ -29,14 +28,14 @@ def main():
     print("\n--- Running Online Phase ---")
     
     # --- Define the Experiment Parameters ---
-    user_counts_to_simulate = [50, 100, 150, 200, 250]
-    # user_counts_to_simulate = [50, 75, 100, 125, 150, 175, 200]
-    iterations_per_count = 100  # As specified for statistical significance
+    user_counts_to_simulate = [50, 75, 100, 125, 150, 175, 200] # UPDATED USER COUNTS
+    iterations_per_count = 100  
     
     # This dictionary will store all final results, ready for plotting
     experiment_results = {
         "vs_users": {},
-        "vs_time": {}
+        "vs_time": {},
+        "vs_time_requests": {} # NEW: For requests vs time
     }
 
     # --- Run the Full Experiment ---
@@ -47,15 +46,33 @@ def main():
         run_totals = {
             "sensor_accesses": [],
             "energy_consumed": [],
-            "avg_aoi": [] # For QoS
+            "avg_aoi": [], 
         }
         # Dicts to aggregate time-series data across the 100 iterations
-        time_series_agg = {"accesses": defaultdict(list), "energy": defaultdict(list)}
+        time_series_agg = {
+            "accesses": defaultdict(list), 
+            "energy": defaultdict(list),
+            "requests": defaultdict(list) # NEW: Aggregate request counts
+        }
         
         for i in range(iterations_per_count):
-            print(f"  Running iteration {i+1}/{iterations_per_count}...")
-            # Run one full simulation from the online_simulator module
-            result = run_single_online_iteration(num_users, master_policies, param_classifications)
+            # We need to run the guass_morkov simulation to get requests BEFORE running the online simulator
+            # This is necessary because we need the raw request count for the "Requests vs Time" plot.
+            simulation_events = run_simulation(
+                num_users=num_users, num_sensors=450, area=(0, 10000, 0, 10000),
+                duration=100, mean_speed=15, alpha=0.75
+            )
+            
+            # Run one full simulation from the online_simulator module using the generated events
+            result = run_single_online_iteration(
+                num_users, master_policies, param_classifications, 
+                simulation_events=simulation_events # Pass events directly
+            )
+            
+            # --- Aggregate and store the request count data ---
+            request_counts_in_run = result["requests_over_time"] # Now available from online_simulator
+            for t, val in request_counts_in_run.items():
+                time_series_agg["requests"][t].append(val)
             
             # Store the total metrics for this iteration
             run_totals["sensor_accesses"].append(result["total_sensor_accesses"])
@@ -67,9 +84,11 @@ def main():
                 time_series_agg["accesses"][t].append(val)
             for t, val in result["energy_over_time"].items():
                 time_series_agg["energy"][t].append(val)
+            
+            # print(f"  Iteration {i+1}/{iterations_per_count} complete.") # Keep simulation progress visible
 
         # --- Aggregate and store the results for this user count ---
-        # Data for "vs Users" plot
+        # Data for "vs Users" plot (Sensor Access, Energy, AoI)
         experiment_results["vs_users"][num_users] = {
             "avg_sensor_accesses": np.mean(run_totals["sensor_accesses"]),
             "std_sensor_accesses": np.std(run_totals["sensor_accesses"]),
@@ -79,12 +98,19 @@ def main():
             "std_aoi_for_qos": np.std(run_totals["avg_aoi"])
         }
         
-        # Data for "vs Time" plot
+        # Data for "vs Time" plot (Sensor Access, Energy)
         sorted_time_steps = sorted(time_series_agg["accesses"].keys())
         experiment_results["vs_time"][num_users] = {
             "time_steps": sorted_time_steps,
-            "avg_accesses_over_time": [np.mean(time_series_agg["accesses"][t]) for t in sorted_time_steps],
+            "avg_sensor_accesses_over_time": [np.mean(time_series_agg["accesses"][t]) for t in sorted_time_steps],
             "avg_energy_over_time": [np.mean(time_series_agg["energy"][t]) for t in sorted_time_steps]
+        }
+        
+        # Data for "Requests vs Time" plot
+        sorted_req_time_steps = sorted(time_series_agg["requests"].keys())
+        experiment_results["vs_time_requests"][num_users] = {
+            "time_steps": sorted_req_time_steps,
+            "avg_requests_over_time": [np.mean(time_series_agg["requests"][t]) for t in sorted_req_time_steps]
         }
     
     print("\n--- All Experiments Complete ---")
@@ -97,4 +123,6 @@ def main():
 
 
 if __name__ == "__main__":
+    # Ensure necessary modules are imported correctly when running main
+    from simulation.guass_morkov import run_simulation # Required by main() for event generation
     main()

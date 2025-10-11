@@ -1,242 +1,50 @@
 {
-  "acceleration_g_force": [
-    "High",
-    "Low"
-  ],
-  "average_speed_segment": [
+  "ambient_temperature": [
     "Low",
     "Medium"
   ],
-  "current_gear": [
-    "High",
-    "High"
-  ],
-  "current_speed": [
-    "Medium",
-    "Low"
-  ],
-  "cyclist_detected_side": [
-    "Low",
-    "High"
-  ],
-  "cyclist_distance": [
-    "Low",
-    "High"
-  ],
-  "cyclist_relative_speed": [
+  "average_speed": [
     "Low",
     "Low"
   ],
-  "distance_to_accident": [
+  "ebike_availability_count": [
+    "High",
+    "Low"
+  ],
+  "parking_slot_availability": [
     "Medium",
     "Medium"
   ],
-  "distance_to_red_light": [
+  "pothole_severity_score": [
+    "Medium",
+    "High"
+  ],
+  "road_closure": [
+    "High",
+    "Medium"
+  ],
+  "road_segment_length": [
     "Low",
     "Low"
   ],
-  "distance_to_signal": [
-    "Low",
-    "Low"
-  ],
-  "driver_brake_pedal_status": [
-    "High",
-    "Low"
-  ],
-  "emergency_vehicle_direction": [
-    "Medium",
-    "Medium"
-  ],
-  "engine_rpm": [
-    "Low",
-    "Medium"
-  ],
-  "engine_temp": [
-    "Medium",
-    "High"
-  ],
-  "error_codes": [
-    "Medium",
-    "Low"
-  ],
-  "eye_blink_rate": [
-    "Medium",
-    "Medium"
-  ],
-  "forward_object_distance": [
-    "Low",
-    "Medium"
-  ],
-  "forward_vehicle_distance": [
-    "High",
-    "Low"
-  ],
-  "gaze_direction": [
-    "High",
-    "Medium"
-  ],
-  "head_pose_angle": [
-    "High",
-    "High"
-  ],
-  "humidity": [
-    "High",
-    "High"
-  ],
-  "oil_pressure": [
-    "Medium",
-    "Medium"
-  ],
-  "oncoming_traffic_distance": [
-    "Medium",
-    "Low"
-  ],
-  "oncoming_traffic_speed": [
-    "Low",
-    "Low"
-  ],
-  "own_vehicle_speed": [
-    "High",
-    "Low"
-  ],
-  "pedestrian_detected": [
-    "Low",
-    "Low"
-  ],
-  "pedestrian_distance": [
-    "High",
-    "Medium"
-  ],
-  "pedestrian_trajectory": [
-    "Medium",
-    "High"
-  ],
-  "pothole_density": [
+  "road_shade_coverage": [
     "Low",
     "High"
   ],
-  "precipitation_intensity": [
+  "road_surface_temperature": [
+    "High",
+    "High"
+  ],
+  "road_water_level": [
+    "Medium",
+    "High"
+  ],
+  "shop_footfall_count": [
     "High",
     "Low"
   ],
-  "rear_obstacle_distance": [
-    "Low",
-    "Medium"
-  ],
-  "rear_vehicle_distance": [
+  "traffic_congestion": [
     "Medium",
     "Medium"
-  ],
-  "relative_speed": [
-    "High",
-    "Medium"
-  ],
-  "relative_speed_rear": [
-    "Low",
-    "High"
-  ],
-  "road_geometry_curvature": [
-    "Medium",
-    "Medium"
-  ],
-  "road_gradient": [
-    "High",
-    "High"
-  ],
-  "road_surface_condition": [
-    "Low",
-    "Low"
-  ],
-  "side_obstacle_distance": [
-    "Low",
-    "High"
-  ],
-  "side_traffic_left_detected": [
-    "High",
-    "High"
-  ],
-  "side_traffic_right_detected": [
-    "Medium",
-    "High"
-  ],
-  "side_vehicle_distance": [
-    "Low",
-    "Medium"
-  ],
-  "steering_angle": [
-    "Medium",
-    "Medium"
-  ],
-  "steering_angle_rate": [
-    "Low",
-    "Low"
-  ],
-  "steering_wheel_movement_variance": [
-    "Medium",
-    "High"
-  ],
-  "surface_moisture_level": [
-    "Low",
-    "High"
-  ],
-  "surface_temperature": [
-    "High",
-    "Medium"
-  ],
-  "temperature": [
-    "Medium",
-    "High"
-  ],
-  "time_gaze_off_road": [
-    "Medium",
-    "Low"
-  ],
-  "time_stopped": [
-    "Low",
-    "High"
-  ],
-  "time_to_green_light": [
-    "High",
-    "Medium"
-  ],
-  "tire_pressure_FL": [
-    "High",
-    "High"
-  ],
-  "tire_pressure_FR": [
-    "High",
-    "Low"
-  ],
-  "tire_pressure_RL": [
-    "Medium",
-    "Medium"
-  ],
-  "tire_pressure_RR": [
-    "High",
-    "Low"
-  ],
-  "upcoming_signal_status": [
-    "Medium",
-    "Low"
-  ],
-  "v2x_accident_alert": [
-    "Medium",
-    "Low"
-  ],
-  "v2x_emergency_vehicle_alert": [
-    "High",
-    "Medium"
-  ],
-  "vehicle_count_segment": [
-    "High",
-    "Medium"
-  ],
-  "vehicle_speed": [
-    "Low",
-    "High"
-  ],
-  "visibility_distance": [
-    "Medium",
-    "High"
   ]
 }

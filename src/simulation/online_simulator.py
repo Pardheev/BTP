@@ -21,15 +21,19 @@ def get_params_for_dq(dq_number):
     recipe_key = list(DECISION_RECIPES.keys())[dq_number % len(DECISION_RECIPES)]
     return DECISION_RECIPES[recipe_key]["parameters"]
 
-def run_single_online_iteration(num_users, master_policies, param_classifications):
+def run_single_online_iteration(num_users, master_policies, param_classifications, simulation_events=None):
     """
     Runs ONE full online simulation iteration and returns the detailed performance metrics.
+    
+    Modified to accept pre-generated simulation_events.
     """
-    # --- 1. Generate all simulation events ---
-    simulation_events = run_simulation(
-        num_users=num_users, num_sensors=450, area=(0, 10000, 0, 10000),
-        duration=100, mean_speed=15, alpha=0.75
-    )
+    if simulation_events is None:
+        # Fallback for testing, but main.py will pass this directly
+        simulation_events = run_simulation(
+            num_users=num_users, num_sensors=450, area=(0, 10000, 0, 10000),
+            duration=100, mean_speed=15, alpha=0.75
+        )
+        
     all_requests = simulation_events["requests"]
     static_sensors = simulation_events["static_sensors"]
 
@@ -41,15 +45,20 @@ def run_single_online_iteration(num_users, master_policies, param_classification
     total_energy_consumed = 0
     total_decisions_made = 0
     
-    # NEW: List to store the AoI for every parameter used in a decision
+    # NEW: Metrics for time-series and QoS
     aoi_at_decision_time = []
-
     accesses_over_time = defaultdict(int)
     energy_over_time = defaultdict(float)
+    requests_over_time = defaultdict(int) # NEW: Track total requests per time step
 
     # --- 3. Process All Requests Chronologically ---
     for request in all_requests:
-        user_id, user_x, user_y, time_step, dq_list = request
+        # Request structure is now: [user_id, user_x, user_y, request_id, time_step, dq_list]
+        user_id, user_x, user_y, request_id, time_step, dq_list = request
+        
+        # Track number of unique requests per time step (for the "Requests vs Time" plot)
+        requests_over_time[time_step] += 1
+
         user_coords = (user_x, user_y)
         nearest_sensor_id, _ = find_nearest_sensor(user_coords, static_sensors)
         
@@ -63,16 +72,15 @@ def run_single_online_iteration(num_users, master_policies, param_classification
                 # Default to a high AoI if the parameter has never been seen
                 current_aoi = db.get(db_key, MAX_AOI)
                 
-                # ==========================================================
-                # <--- NEW: RECORD THE AOI FOR QOS MEASUREMENT --- >
-                # ==========================================================
+                # RECORD THE AOI FOR QOS MEASUREMENT
                 aoi_at_decision_time.append(current_aoi)
 
-                # --- (The rest of the MDP logic is the same) ---
+                # --- MDP Logic to decide action ---
                 if db_key not in db:
                     action = 1
                 else:
-                    category = tuple(param_classifications.get(param))
+                    # Note: param_classifications uses a list from json load, must convert to tuple for dict lookup
+                    category = tuple(param_classifications.get(param)) 
                     
                     if category and category in master_policies:
                         policy = master_policies[category]
@@ -94,13 +102,14 @@ def run_single_online_iteration(num_users, master_policies, param_classification
 
     # --- Calculate the final QoS metric ---
     avg_aoi = np.mean(aoi_at_decision_time) if aoi_at_decision_time else 0
-    avg_energy_per_decision = total_energy_consumed / total_decisions_made if total_decisions_made > 0 else 0
-
+    # avg_energy_per_decision calculation is generally kept for internal reference, 
+    # but the plots require total_energy_consumed
+    
     return {
-        "avg_aoi_for_qos": avg_aoi, # <-- Your new QoS metric
+        "avg_aoi_for_qos": avg_aoi, 
         "total_sensor_accesses": total_sensor_accesses,
-        "avg_energy_per_decision": avg_energy_per_decision,
         "total_energy_consumed": total_energy_consumed,
+        "requests_over_time": requests_over_time, # NEW RETURN VALUE
         "accesses_over_time": accesses_over_time,
         "energy_over_time": energy_over_time
     }
